@@ -7,20 +7,24 @@
 
   <style>
     :root{
-      /* Coolors palette */
-      --bg: #4F6D7A;      /* background principal */
-      --text: #DBE9EE;    /* texto principal */
-      --muted: #C0D6DF;   /* texto secundario/bordes */
-      --primary: #4A6FA5; /* botón primario / activo */
-      --accent: #166088;  /* focus / acentos */
+      /* Night mode palette (similar to the mock) */
+      --bg: #0B0F17;
+      --panel: #0F1624;
+      --panel2: #0C1320;
+      --border: rgba(255,255,255,0.10);
+      --border2: rgba(255,255,255,0.08);
 
-      /* UI tokens */
-      --card: rgba(219,233,238,0.08);
-      --card2: rgba(219,233,238,0.06);
-      --border: rgba(192,214,223,0.35);
-      --border2: rgba(192,214,223,0.25);
-      --input-bg: rgba(219,233,238,0.06);
-      --shadow: 0 10px 30px rgba(0,0,0,0.15);
+      --text: #E7EDF7;
+      --muted: rgba(231,237,247,0.70);
+
+      --primary: #274C8B;   /* button / active */
+      --primary2: #1F3F74;  /* hover */
+      --accent: #7FA6D6;    /* headings / accents */
+      --focus: #3E7AB8;     /* focus ring */
+
+      --pillBg: rgba(255,255,255,0.06);
+
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
       --radius: 14px;
     }
 
@@ -33,14 +37,24 @@
     }
     .wrap{ max-width: 980px; margin: 0 auto; padding: 16px; }
 
-    h1{ font-size: 20px; margin: 8px 0 10px; }
-    h2{ font-size: 16px; margin: 16px 0 10px; color: var(--text); opacity: 0.95; }
+    h1{
+      font-size: 28px;
+      margin: 6px 0 14px;
+      text-align: center;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+    }
+    h2{
+      font-size: 18px;
+      margin: 12px 0 10px;
+      color: var(--accent);
+    }
 
     .card{
-      background: var(--card);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 14px;
+      padding: 16px;
       box-shadow: var(--shadow);
     }
 
@@ -48,42 +62,49 @@
     @media (min-width: 760px){ .grid-3{ grid-template-columns: 1fr 1fr 1fr; } }
     @media (min-width: 760px){ .grid-2{ grid-template-columns: 1fr 1fr; } }
 
-    label{ display:block; font-size: 12px; color: rgba(192,214,223,0.95); margin-bottom: 6px; }
+    label{
+      display:block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
 
     input, select, button{
       width: 100%;
-      padding: 10px 10px;
+      padding: 11px 12px;
       border-radius: 12px;
       border: 1px solid var(--border);
-      background: var(--input-bg);
+      background: rgba(0,0,0,0.12);
       color: var(--text);
       outline: none;
     }
-    input::placeholder{ color: rgba(192,214,223,0.65); }
+    input::placeholder{ color: rgba(231,237,247,0.35); }
 
     input:focus, select:focus{
-      border-color: rgba(22,96,136,0.85);
-      box-shadow: 0 0 0 3px rgba(22,96,136,0.25);
+      border-color: rgba(62,122,184,0.85);
+      box-shadow: 0 0 0 3px rgba(62,122,184,0.25);
     }
 
     button{
       cursor:pointer;
-      border-color: rgba(74,111,165,0.9);
-      background: rgba(74,111,165,0.35);
+      background: linear-gradient(180deg, rgba(39,76,139,0.95), rgba(31,63,116,0.95));
+      border-color: rgba(39,76,139,0.95);
     }
-    button:hover{ background: rgba(74,111,165,0.5); }
+    button:hover{
+      background: linear-gradient(180deg, rgba(39,76,139,1), rgba(31,63,116,1));
+    }
 
     .ghost{
-      background: transparent;
+      background: rgba(255,255,255,0.03);
       border-color: var(--border2);
     }
-    .ghost:hover{ background: rgba(219,233,238,0.08); }
+    .ghost:hover{ background: rgba(255,255,255,0.06); }
 
     .row{ display:flex; gap:10px; align-items:end; }
     .row > *{ flex:1; }
 
-    .muted{ color: rgba(192,214,223,0.95); font-size: 12px; line-height: 1.35; }
-    .danger{ color: #ffd1d1; font-size: 12px; }
+    .muted{ color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .danger{ color: #FFB4B4; font-size: 12px; }
 
     .list{ display:flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 
@@ -91,10 +112,9 @@
       border:1px solid var(--border2);
       border-radius: var(--radius);
       padding: 12px;
-      background: var(--card2);
+      background: rgba(255,255,255,0.03);
     }
 
-    /* Header within cards (keep simple, no absolute) */
     .itemTop{
       display:flex;
       justify-content: space-between;
@@ -102,14 +122,14 @@
       align-items: baseline;
     }
 
-    .itemName{ font-weight: 650; }
+    .itemName{ font-weight: 700; font-size: 18px; }
 
     .pill{
       font-size: 12px;
       color: var(--text);
-      background: rgba(219,233,238,0.07);
+      background: var(--pillBg);
       border: 1px solid var(--border2);
-      padding: 4px 8px;
+      padding: 6px 10px;
       border-radius: 999px;
       white-space: nowrap;
     }
@@ -120,37 +140,43 @@
       border-radius: 12px;
       overflow:hidden;
     }
-    .seg button{ border:0; border-radius:0; background: transparent; }
-    .seg button.active{ background: rgba(74,111,165,0.45); }
+    .seg button{
+      border:0;
+      border-radius:0;
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+    }
+    .seg button:hover{ background: rgba(255,255,255,0.05); }
+    .seg button.active{
+      background: linear-gradient(180deg, rgba(39,76,139,0.95), rgba(31,63,116,0.95));
+    }
 
     .result{
       margin-top: 10px;
-      padding: 10px;
+      padding: 10px 12px;
       border-radius: 12px;
       border:1px solid var(--border);
-      background: rgba(219,233,238,0.06);
+      background: rgba(0,0,0,0.14);
     }
-    .result strong{ font-size: 14px; }
-    .tiny{ font-size: 11px; color: rgba(192,214,223,0.9); }
+    .result strong{ font-size: 16px; }
+    .tiny{ font-size: 11px; color: rgba(231,237,247,0.65); }
 
-    /* ===== FIX: robust Grid layout for "Infusiones agregadas" cards ===== */
+    /* Robust Grid layout for "Infusiones agregadas" cards */
     .infCard{
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 12px;
       align-items: start;
     }
-    .infLeft{
-      min-width: 0; /* allow wrap */
-    }
+    .infLeft{ min-width: 0; }
     .infMeta{
-      margin-top: 4px;
-      color: rgba(192,214,223,0.95);
+      margin-top: 6px;
+      color: rgba(231,237,247,0.70);
       font-size: 12px;
       line-height: 1.3;
     }
     .infConc{
-      margin-top: 6px;
+      margin-top: 8px;
       white-space: normal;
       overflow-wrap: anywhere;
       line-height: 1.25;
@@ -171,6 +197,39 @@
       padding: 8px 10px;
       flex-shrink: 0;
     }
+
+    /* Instructions blocks */
+    .instr{
+      margin-top: 6px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border2);
+      background: rgba(255,255,255,0.02);
+    }
+    .instr ol{
+      margin: 0;
+      padding-left: 18px;
+    }
+    .instr li{
+      margin: 3px 0;
+      color: rgba(231,237,247,0.75);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    /* Footer */
+    .footer{
+      margin-top: 14px;
+      text-align: center;
+      color: rgba(231,237,247,0.65);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .divider{
+      height: 1px;
+      background: rgba(255,255,255,0.10);
+      margin: 14px 0;
+    }
   </style>
 </head>
 
@@ -179,28 +238,31 @@
     <h1>Calculadora de Infusiones</h1>
 
     <div class="card">
-      <h2>1) Paciente e infusiones</h2>
+      <h2>Preparación</h2>
 
-      <!-- Instrucciones puntuales (Preparación) -->
-      <div class="muted">
-        <div><b>Nombre del medicamento.</b></div>
-        <div><b>Medicamento (mg):</b> cantidad total en la mezcla.</div>
-        <div><b>Volumen total (mL):</b> volumen final.</div>
-        <div><b>“Agregar infusión”.</b></div>
-        <div>Se muestra concentración en <b>mg/mL</b> y <b>mcg/mL</b>.</div>
-        <div>Se guarda localmente.</div>
+      <div class="instr">
+        <ol>
+          <li>Ingresa el <b>peso (kg)</b> del paciente.</li>
+          <li>Escribe el <b>nombre</b> del medicamento.</li>
+          <li>Captura <b>Medicamento (mg)</b> = cantidad total en la mezcla.</li>
+          <li>Captura <b>Volumen total (mL)</b> = volumen final de la mezcla.</li>
+          <li>Presiona <b>“Agregar infusión”</b>. Se mostrará la concentración en <b>mg/mL</b> y <b>mcg/mL</b>.</li>
+          <li>Las infusiones se guardan <b>localmente</b> en este dispositivo.</li>
+        </ol>
       </div>
 
-      <div class="grid grid-3" style="margin-top:10px;">
+      <div class="grid grid-3" style="margin-top:12px;">
         <div>
           <label>Peso del paciente (kg)</label>
           <input id="weightKg" inputmode="decimal" placeholder="Ej. 70" />
           <div id="weightErr" class="danger" style="display:none; margin-top:6px;"></div>
         </div>
+
         <div>
           <label>Nombre del medicamento</label>
           <input id="drugName" placeholder="Ej. Norepinefrina" />
         </div>
+
         <div>
           <label>Preparación</label>
           <div class="row">
@@ -216,8 +278,8 @@
         </div>
       </div>
 
-      <div class="row" style="margin-top:10px;">
-        <div class="muted"></div>
+      <div class="row" style="margin-top:12px;">
+        <div></div>
         <div style="flex:0.6;">
           <button id="addBtn">Agregar infusión</button>
         </div>
@@ -225,7 +287,7 @@
 
       <div id="addErr" class="danger" style="display:none; margin-top:10px;"></div>
 
-      <div style="margin-top:14px;">
+      <div style="margin-top:16px;">
         <div class="itemTop">
           <div class="muted">Infusiones agregadas</div>
           <div>
@@ -237,29 +299,32 @@
     </div>
 
     <div class="card" style="margin-top:14px;">
-      <h2>2) Calculadora</h2>
+      <h2>Calculadora</h2>
 
-      <!-- Instrucciones puntuales (Calculadora) -->
-      <div class="muted">
-        <div><b>“Velocidad actual → Dosis”:</b> tienes mL/h.</div>
-        <div><b>“Dosis deseada → Velocidad”:</b> tienes dosis objetivo.</div>
-        <div>Selecciona infusión + peso (kg) + dato del modo.</div>
+      <div class="instr">
+        <ol>
+          <li>Elige el modo: <b>“Velocidad actual → Dosis”</b> si tienes <b>mL/h</b>.</li>
+          <li>Elige <b>“Dosis deseada → Velocidad”</b> si tienes una <b>dosis objetivo</b>.</li>
+          <li>En cada infusión, escribe el dato del modo (mL/h o dosis) y selecciona la unidad.</li>
+          <li>Revisa el resultado en la tarjeta (se actualiza al escribir).</li>
+        </ol>
       </div>
 
-      <div class="row" style="align-items:center; margin-top:10px;">
+      <div class="row" style="align-items:center; margin-top:12px;">
         <div class="muted">Modo</div>
-        <div class="seg" style="max-width:520px;">
-          <button id="modeRate" class="active" type="button">Velocidad actual → Dosis</button>
-          <button id="modeDose" type="button">Dosis deseada → Velocidad</button>
+        <div class="seg" style="max-width:560px;">
+          <button id="modeRate" class="active" type="button">Velocidad → Dosis</button>
+          <button id="modeDose" type="button">Dosis → Velocidad</button>
         </div>
       </div>
 
       <div id="calcList" class="list" style="margin-top:12px;"></div>
-    </div>
 
-    <!-- Nota (copy) -->
-    <div class="muted" style="margin-top:14px;">
-      <b>Nota:</b> Si cambias la mezcla, crea otra infusión.
+      <div class="divider"></div>
+      <div class="footer">
+        <div>No sustituye juicio clínico.</div>
+        <div>Hecho por Joel Chávez Gómez</div>
+      </div>
     </div>
   </div>
 
@@ -274,7 +339,7 @@
     return Number.isFinite(n) ? n : NaN;
   }
 
-  // Redondeo: entero si no hay decimales; si hay, 2 decimales
+  // entero si no hay decimales; si hay -> 2 decimales
   function fmtSmart(n) {
     if (!Number.isFinite(n)) return "—";
     const r = Math.round(n);
@@ -283,12 +348,12 @@
   }
 
   function saveState() {
-    localStorage.setItem("inf_calc_state_v3", JSON.stringify(state));
+    localStorage.setItem("inf_calc_state_night_v1", JSON.stringify(state));
   }
 
   function loadState() {
     try {
-      const raw = localStorage.getItem("inf_calc_state_v3");
+      const raw = localStorage.getItem("inf_calc_state_night_v1");
       if (!raw) return;
       const obj = JSON.parse(raw);
       if (obj && typeof obj === "object") state = obj;
@@ -361,7 +426,7 @@
 
   function calcRateFromDesired({ W, C, x, unit }) {
     const mg_h = desiredToMgH({ x, unit, W });
-    return mg_h / C; // mL/h
+    return mg_h / C;
   }
 
   function validateWeight(show=true) {
@@ -406,14 +471,11 @@
       const div = document.createElement("div");
       div.className = "item";
 
-      // GRID robusto para evitar encimados
       div.innerHTML = `
         <div class="infCard">
           <div class="infLeft">
             <div class="itemName">${escapeHtml(inf.name || "Sin nombre")}</div>
-            <div class="infMeta">
-              Preparación: ${escapeHtml(inf.drugMg)} mg en ${escapeHtml(inf.totalMl)} mL
-            </div>
+            <div class="infMeta">Preparación: ${escapeHtml(inf.drugMg)} mg en ${escapeHtml(inf.totalMl)} mL</div>
             <div class="infMeta infConc">
               <span class="pill">
                 ${Number.isFinite(C) ? `${fmtSmart(C)} mg/mL • ${fmtSmart(Cmcg)} mcg/mL` : "conc. inválida"}
@@ -422,9 +484,6 @@
           </div>
 
           <div class="infRight">
-            <!-- pill numérica opcional (placeholder para “valor” si luego lo quieres).
-                 Por ahora lo dejamos como concisa “OK” para mantener columna estable.
-                 Si no lo quieres, dime y lo quitamos. -->
             <span class="pill" title="Estado">OK</span>
             <button class="ghost" type="button" data-del="${inf.id}">Eliminar</button>
           </div>
@@ -444,7 +503,7 @@
     });
   }
 
-  // Actualiza resultados SIN re-render para no perder el foco en inputs
+  // Update results without re-render to preserve input focus
   function updateResultForInfusion(id) {
     const inf = state.infusions.find(x => x.id === id);
     if (!inf) return;
@@ -587,7 +646,6 @@
 
       list.appendChild(div);
 
-      // Bind inputs/selects SIN re-render (no pierde foco)
       const rateInp = div.querySelector(`input[data-rate="${inf.id}"]`);
       if (rateInp) {
         rateInp.addEventListener("input", () => {
@@ -654,7 +712,7 @@
     const mg = toNum(drugMg);
     const ml = toNum(totalMl);
 
-    validateWeight(true); // solo feedback
+    validateWeight(true);
 
     if (!name.length) {
       err.style.display = "block";
@@ -697,7 +755,7 @@
     $("modeRate").classList.toggle("active", mode === "rate");
     $("modeDose").classList.toggle("active", mode === "dose");
     saveState();
-    renderCalcList(); // cambia inputs
+    renderCalcList();
   }
 
   $("modeRate").addEventListener("click", () => setMode("rate"));
