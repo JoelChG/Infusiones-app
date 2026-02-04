@@ -8,7 +8,7 @@
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     body { margin: 0; background:#0b0f17; color:#e7eaf0; }
     .wrap { max-width: 980px; margin: 0 auto; padding: 16px; }
-    h1 { font-size: 20px; margin: 8px 0 16px; }
+    h1 { font-size: 20px; margin: 8px 0 10px; }
     h2 { font-size: 16px; margin: 16px 0 10px; color:#cfd6e6; }
     .card { background:#111827; border:1px solid #1f2a44; border-radius: 14px; padding: 14px; }
     .grid { display:grid; grid-template-columns: 1fr; gap: 10px; }
@@ -47,12 +47,15 @@
 
 <body>
   <div class="wrap">
-    <h1>Calculadora de infusiones (guardias)</h1>
+    <h1>Calculadora de Infusiones</h1>
 
     <div class="card">
       <h2>1) Paciente e infusiones</h2>
+      <div class="muted">
+        1) Ingresa el <b>peso</b>. 2) Captura la <b>preparación</b> (mg totales y mL totales). 3) Presiona <b>Agregar infusión</b>.
+      </div>
 
-      <div class="grid grid-3">
+      <div class="grid grid-3" style="margin-top:10px;">
         <div>
           <label>Peso del paciente (kg)</label>
           <input id="weightKg" inputmode="decimal" placeholder="Ej. 70" />
@@ -79,7 +82,7 @@
 
       <div class="row" style="margin-top:10px;">
         <div class="muted">
-          Tip: esta app guarda automáticamente tus infusiones en el dispositivo.
+          Tip: se guarda automáticamente en este dispositivo (local).
         </div>
         <div style="flex:0.6;">
           <button id="addBtn">Agregar infusión</button>
@@ -101,8 +104,12 @@
 
     <div class="card" style="margin-top:14px;">
       <h2>2) Calculadora</h2>
+      <div class="muted">
+        Elige el modo: <b>Velocidad actual</b> para convertir mL/h → dosis, o <b>Dosis deseada</b> para calcular la velocidad en mL/h.
+        Cada infusión muestra su concentración en <b>mg/mL</b> y <b>mcg/mL</b>.
+      </div>
 
-      <div class="row" style="align-items:center;">
+      <div class="row" style="align-items:center; margin-top:10px;">
         <div class="muted">Modo</div>
         <div class="seg" style="max-width:520px;">
           <button id="modeRate" class="active" type="button">Velocidad actual → Dosis</button>
@@ -110,20 +117,15 @@
         </div>
       </div>
 
-      <div class="muted" style="margin-top:10px;">
-        Los resultados se calculan para cada infusión. En “Dosis deseada” el output es mL/h.
-      </div>
-
       <div id="calcList" class="list" style="margin-top:12px;"></div>
     </div>
 
     <div class="muted" style="margin-top:14px;">
-      Nota: esto NO sustituye verificación clínica (límites por fármaco, compatibilidades, bomba, etc.).
+      Nota: no sustituye verificación clínica (rangos por fármaco, compatibilidades, bomba, etc.).
     </div>
   </div>
 
 <script>
-  // ---------- Helpers ----------
   const $ = (id) => document.getElementById(id);
 
   function toNum(v) {
@@ -134,39 +136,35 @@
     return Number.isFinite(n) ? n : NaN;
   }
 
-  function fmt(n, digits=3) {
+  // Redondeo: entero si no hay decimales; si hay, 2 decimales
+  function fmtSmart(n) {
     if (!Number.isFinite(n)) return "—";
-    // recorta decimales sin exagerar
-    const abs = Math.abs(n);
-    const d = abs >= 100 ? 2 : abs >= 10 ? 3 : digits;
-    return n.toFixed(d);
+    const r = Math.round(n);
+    if (Math.abs(n - r) < 1e-10) return String(r);
+    return n.toFixed(2);
   }
 
   function saveState() {
-    localStorage.setItem("inf_calc_state_v1", JSON.stringify(state));
+    localStorage.setItem("inf_calc_state_v2", JSON.stringify(state));
   }
 
   function loadState() {
     try {
-      const raw = localStorage.getItem("inf_calc_state_v1");
+      const raw = localStorage.getItem("inf_calc_state_v2");
       if (!raw) return;
       const obj = JSON.parse(raw);
       if (obj && typeof obj === "object") state = obj;
     } catch {}
   }
 
-  // ---------- State ----------
   let state = {
     weightKg: "",
-    mode: "rate", // "rate" or "dose"
-    infusions: [
-      // { id, name, drugMg, totalMl, rateMlH, rateOutUnit, desiredDose, desiredUnit }
-    ]
+    mode: "rate",
+    infusions: []
   };
 
   loadState();
 
-  // ---------- Units ----------
   const RATE_OUT_UNITS = [
     { value: "mg_h", label: "mg/h" },
     { value: "mcg_h", label: "mcg/h" },
@@ -183,7 +181,11 @@
     { value: "mcg_kg_min", label: "mcg/kg/min" },
   ];
 
-  // ---------- Core math ----------
+  function labelFor(unit) {
+    const all = [...RATE_OUT_UNITS, ...DESIRED_UNITS];
+    return (all.find(x => x.value === unit) || {}).label || unit;
+  }
+
   function getConcMgMl(inf) {
     const mg = toNum(inf.drugMg);
     const ml = toNum(inf.totalMl);
@@ -192,7 +194,6 @@
   }
 
   function calcDoseFromRate({ W, C, R, outUnit }) {
-    // returns number in requested outUnit
     const mg_h = R * C;
     const mcg_h = mg_h * 1000;
     const mg_kg_h = mg_h / W;
@@ -222,10 +223,9 @@
 
   function calcRateFromDesired({ W, C, x, unit }) {
     const mg_h = desiredToMgH({ x, unit, W });
-    return mg_h / C; // mL/h
+    return mg_h / C;
   }
 
-  // ---------- Rendering ----------
   function validateWeight(show=true) {
     const W = toNum(state.weightKg);
     const ok = (W > 0);
@@ -238,6 +238,15 @@
       el.textContent = "";
     }
     return ok ? W : NaN;
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? "").replace(/[&<>"']/g, (m) => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
+    }[m]));
+  }
+  function escapeAttr(str) {
+    return escapeHtml(str).replace(/"/g, "&quot;");
   }
 
   function renderInfusionList() {
@@ -254,6 +263,7 @@
 
     state.infusions.forEach((inf) => {
       const C = getConcMgMl(inf);
+      const Cmcg = Number.isFinite(C) ? C * 1000 : NaN;
 
       const div = document.createElement("div");
       div.className = "item";
@@ -262,8 +272,11 @@
         <div class="itemTop">
           <div>
             <div class="itemName">${escapeHtml(inf.name || "Sin nombre")}</div>
-            <div class="muted">Preparación: ${escapeHtml(inf.drugMg)} mg en ${escapeHtml(inf.totalMl)} mL
-              <span class="pill" style="margin-left:8px;">${Number.isFinite(C) ? (fmt(C,4) + " mg/mL") : "conc. inválida"}</span>
+            <div class="muted">
+              Preparación: ${escapeHtml(inf.drugMg)} mg en ${escapeHtml(inf.totalMl)} mL
+              <span class="pill" style="margin-left:8px;">
+                ${Number.isFinite(C) ? (fmtSmart(C) + " mg/mL · " + fmtSmart(Cmcg) + " mcg/mL") : "conc. inválida"}
+              </span>
             </div>
           </div>
           <div class="actions">
@@ -274,7 +287,6 @@
       list.appendChild(div);
     });
 
-    // bind delete
     list.querySelectorAll("button[data-del]").forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-del");
@@ -285,11 +297,71 @@
     });
   }
 
+  // --- IMPORTANT: Actualiza resultados SIN re-render para no perder el foco ---
+  function updateResultForInfusion(id) {
+    const inf = state.infusions.find(x => x.id === id);
+    if (!inf) return;
+
+    const W = validateWeight(false);
+    const C = getConcMgMl(inf);
+    const Cmcg = Number.isFinite(C) ? C * 1000 : NaN;
+
+    const concEl = document.querySelector(`[data-conc="${id}"]`);
+    if (concEl) {
+      concEl.textContent = Number.isFinite(C)
+        ? `${fmtSmart(C)} mg/mL · ${fmtSmart(Cmcg)} mcg/mL`
+        : "—";
+    }
+
+    const mainEl = document.querySelector(`[data-main="${id}"]`);
+    const subEl  = document.querySelector(`[data-sub="${id}"]`);
+    const warnEl = document.querySelector(`[data-warn="${id}"]`);
+
+    let mainLine = "—";
+    let subLine = "";
+    let warn = "";
+
+    if (!(Number.isFinite(W) && W > 0)) {
+      warn = "Falta peso del paciente.";
+    } else if (!(Number.isFinite(C) && C > 0)) {
+      warn = "Concentración inválida (mg/mL).";
+    } else if (state.mode === "rate") {
+      const R = toNum(inf.rateMlH);
+      if (R >= 0 && String(inf.rateMlH).trim() !== "") {
+        const val = calcDoseFromRate({ W, C, R, outUnit: inf.rateOutUnit });
+        mainLine = `${fmtSmart(val)} ${labelFor(inf.rateOutUnit)}`;
+        subLine = `(${fmtSmart(R)} mL/h · ${fmtSmart(C)} mg/mL)`;
+      } else {
+        warn = "Ingresa una velocidad (mL/h).";
+      }
+    } else {
+      const x = toNum(inf.desiredDose);
+      if (x >= 0 && String(inf.desiredDose).trim() !== "") {
+        const R = calcRateFromDesired({ W, C, x, unit: inf.desiredUnit });
+        mainLine = `${fmtSmart(R)} mL/h`;
+        subLine = `para ${fmtSmart(x)} ${labelFor(inf.desiredUnit)} con ${fmtSmart(C)} mg/mL`;
+      } else {
+        warn = "Ingresa una dosis deseada.";
+      }
+    }
+
+    if (mainEl) mainEl.textContent = mainLine;
+    if (subEl) subEl.textContent = subLine;
+
+    if (warnEl) {
+      if (warn) {
+        warnEl.style.display = "block";
+        warnEl.textContent = warn;
+      } else {
+        warnEl.style.display = "none";
+        warnEl.textContent = "";
+      }
+    }
+  }
+
   function renderCalcList() {
     const list = $("calcList");
     list.innerHTML = "";
-
-    const W = validateWeight(false);
 
     if (!state.infusions.length) {
       const empty = document.createElement("div");
@@ -300,12 +372,12 @@
     }
 
     state.infusions.forEach((inf) => {
-      const C = getConcMgMl(inf);
-
       const div = document.createElement("div");
       div.className = "item";
 
       const isRateMode = state.mode === "rate";
+      const C = getConcMgMl(inf);
+      const Cmcg = Number.isFinite(C) ? C * 1000 : NaN;
 
       const rateMlH = (inf.rateMlH ?? "");
       const outUnit = (inf.rateOutUnit ?? "mcg_kg_min");
@@ -313,40 +385,16 @@
       const desiredDose = (inf.desiredDose ?? "");
       const desiredUnit = (inf.desiredUnit ?? "mcg_kg_min");
 
-      // Compute
-      let mainLine = "—";
-      let subLine = "";
-      let warn = "";
-
-      if (!(Number.isFinite(W) && W > 0)) {
-        warn = "Falta peso del paciente.";
-      } else if (!(Number.isFinite(C) && C > 0)) {
-        warn = "Concentración inválida (mg/mL).";
-      } else if (isRateMode) {
-        const R = toNum(rateMlH);
-        if (R > 0) {
-          const val = calcDoseFromRate({ W, C, R, outUnit });
-          mainLine = `${fmt(val)} ${labelFor(outUnit)}`;
-          subLine = `(${fmt(R)} mL/h · ${fmt(C,4)} mg/mL)`;
-        } else {
-          warn = "Ingresa una velocidad (mL/h).";
-        }
-      } else {
-        const x = toNum(desiredDose);
-        if (x > 0) {
-          const R = calcRateFromDesired({ W, C, x, unit: desiredUnit });
-          mainLine = `${fmt(R)} mL/h`;
-          subLine = `para ${fmt(x)} ${labelFor(desiredUnit)} con ${fmt(C,4)} mg/mL`;
-        } else {
-          warn = "Ingresa una dosis deseada.";
-        }
-      }
-
       div.innerHTML = `
         <div class="itemTop">
           <div>
             <div class="itemName">${escapeHtml(inf.name || "Sin nombre")}</div>
-            <div class="muted">Conc: ${Number.isFinite(C) ? (fmt(C,4) + " mg/mL") : "—"}</div>
+            <div class="muted">
+              Conc:
+              <span class="pill" data-conc="${inf.id}">
+                ${Number.isFinite(C) ? `${fmtSmart(C)} mg/mL · ${fmtSmart(Cmcg)} mcg/mL` : "—"}
+              </span>
+            </div>
           </div>
           <div class="pill">${isRateMode ? "Velocidad → Dosis" : "Dosis → mL/h"}</div>
         </div>
@@ -384,54 +432,53 @@
         `}
 
         <div class="result">
-          <strong>${escapeHtml(mainLine)}</strong>
-          <div class="tiny">${escapeHtml(subLine)}</div>
-          ${warn ? `<div class="danger" style="margin-top:6px;">${escapeHtml(warn)}</div>` : ""}
+          <strong data-main="${inf.id}">—</strong>
+          <div class="tiny" data-sub="${inf.id}"></div>
+          <div class="danger" data-warn="${inf.id}" style="margin-top:6px; display:none;"></div>
         </div>
       `;
 
       list.appendChild(div);
-    });
 
-    // Bind inputs/selects
-    list.querySelectorAll("input[data-rate]").forEach(inp => {
-      inp.addEventListener("input", () => {
-        const id = inp.getAttribute("data-rate");
-        const inf = state.infusions.find(x => x.id === id);
-        inf.rateMlH = inp.value;
-        saveState();
-        renderCalcList();
-      });
-    });
+      // Bind inputs/selects SIN re-render (no pierde foco)
+      const rateInp = div.querySelector(`input[data-rate="${inf.id}"]`);
+      if (rateInp) {
+        rateInp.addEventListener("input", () => {
+          inf.rateMlH = rateInp.value;
+          saveState();
+          updateResultForInfusion(inf.id);
+        });
+      }
 
-    list.querySelectorAll("select[data-outunit]").forEach(sel => {
-      sel.addEventListener("change", () => {
-        const id = sel.getAttribute("data-outunit");
-        const inf = state.infusions.find(x => x.id === id);
-        inf.rateOutUnit = sel.value;
-        saveState();
-        renderCalcList();
-      });
-    });
+      const outSel = div.querySelector(`select[data-outunit="${inf.id}"]`);
+      if (outSel) {
+        outSel.addEventListener("change", () => {
+          inf.rateOutUnit = outSel.value;
+          saveState();
+          updateResultForInfusion(inf.id);
+        });
+      }
 
-    list.querySelectorAll("input[data-dose]").forEach(inp => {
-      inp.addEventListener("input", () => {
-        const id = inp.getAttribute("data-dose");
-        const inf = state.infusions.find(x => x.id === id);
-        inf.desiredDose = inp.value;
-        saveState();
-        renderCalcList();
-      });
-    });
+      const doseInp = div.querySelector(`input[data-dose="${inf.id}"]`);
+      if (doseInp) {
+        doseInp.addEventListener("input", () => {
+          inf.desiredDose = doseInp.value;
+          saveState();
+          updateResultForInfusion(inf.id);
+        });
+      }
 
-    list.querySelectorAll("select[data-desunit]").forEach(sel => {
-      sel.addEventListener("change", () => {
-        const id = sel.getAttribute("data-desunit");
-        const inf = state.infusions.find(x => x.id === id);
-        inf.desiredUnit = sel.value;
-        saveState();
-        renderCalcList();
-      });
+      const desSel = div.querySelector(`select[data-desunit="${inf.id}"]`);
+      if (desSel) {
+        desSel.addEventListener("change", () => {
+          inf.desiredUnit = desSel.value;
+          saveState();
+          updateResultForInfusion(inf.id);
+        });
+      }
+
+      // Inicializa resultado para este item
+      updateResultForInfusion(inf.id);
     });
   }
 
@@ -441,11 +488,12 @@
     renderCalcList();
   }
 
-  // ---------- Events ----------
+  // Events
   $("weightKg").addEventListener("input", (e) => {
     state.weightKg = e.target.value;
     saveState();
-    renderCalcList();
+    // Solo recalcular resultados (sin re-render)
+    state.infusions.forEach(inf => updateResultForInfusion(inf.id));
   });
 
   $("addBtn").addEventListener("click", () => {
@@ -453,7 +501,6 @@
     err.style.display = "none";
     err.textContent = "";
 
-    // update state weight from field (in case)
     state.weightKg = $("weightKg").value;
 
     const name = $("drugName").value.trim();
@@ -463,9 +510,9 @@
     const mg = toNum(drugMg);
     const ml = toNum(totalMl);
 
-    // validate
-    const W = validateWeight(true); // warn but not required to add infusion
-    if (!(name.length)) {
+    validateWeight(true); // solo para feedback
+
+    if (!name.length) {
       err.style.display = "block";
       err.textContent = "Pon el nombre del medicamento.";
       return;
@@ -487,7 +534,6 @@
       desiredUnit: "mcg_kg_min",
     });
 
-    // clear form
     $("drugName").value = "";
     $("drugMg").value = "";
     $("totalMl").value = "";
@@ -507,30 +553,17 @@
     $("modeRate").classList.toggle("active", mode === "rate");
     $("modeDose").classList.toggle("active", mode === "dose");
     saveState();
+    // aquí sí re-render porque cambia el tipo de inputs
     renderCalcList();
   }
 
   $("modeRate").addEventListener("click", () => setMode("rate"));
   $("modeDose").addEventListener("click", () => setMode("dose"));
 
-  // ---------- Small utils ----------
-  function labelFor(unit) {
-    const all = [...RATE_OUT_UNITS, ...DESIRED_UNITS];
-    return (all.find(x => x.value === unit) || {}).label || unit;
-  }
-
-  function escapeHtml(str) {
-    return String(str ?? "").replace(/[&<>"']/g, (m) => ({
-      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
-    }[m]));
-  }
-  function escapeAttr(str) {
-    return escapeHtml(str).replace(/"/g, "&quot;");
-  }
-
-  // ---------- Init ----------
+  // Init
   if (state.mode === "dose") setMode("dose");
   renderAll();
 </script>
 </body>
 </html>
+
