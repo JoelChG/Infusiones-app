@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora de Infusiones</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background:#0b0f17; color:#e7eaf0; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 20px; margin: 8px 0 16px; }
+    h2 { font-size: 16px; margin: 16px 0 10px; color:#cfd6e6; }
+    .card { background:#111827; border:1px solid #1f2a44; border-radius: 14px; padding: 14px; }
+    .grid { display:grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 760px) { .grid-3 { grid-template-columns: 1fr 1fr 1fr; } }
+    @media (min-width: 760px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+    label { display:block; font-size: 12px; color:#aeb8cf; margin-bottom: 6px; }
+    input, select, button {
+      width: 100%; box-sizing: border-box;
+      padding: 10px 10px; border-radius: 10px;
+      border:1px solid #263555; background:#0b1220; color:#e7eaf0;
+      outline: none;
+    }
+    input::placeholder { color:#6b7280; }
+    button { cursor:pointer; border:1px solid #35508a; background:#132042; }
+    button:hover { background:#172a57; }
+    .row { display:flex; gap:10px; align-items: end; }
+    .row > * { flex: 1; }
+    .muted { color:#9aa6c2; font-size: 12px; }
+    .danger { color:#ffb4b4; font-size: 12px; }
+    .list { display:flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .item { border:1px solid #1f2a44; border-radius: 14px; padding: 12px; background:#0c1324; }
+    .itemTop { display:flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+    .pill { font-size: 12px; color:#cdd6ea; background:#0b1220; border:1px solid #1f2a44; padding: 4px 8px; border-radius: 999px; }
+    .itemName { font-weight: 650; }
+    .actions { display:flex; gap:8px; }
+    .ghost { background: transparent; border-color:#263555; }
+    .ghost:hover { background:#0b1220; }
+    .seg { display:flex; border:1px solid #263555; border-radius: 12px; overflow:hidden; }
+    .seg button { border:0; border-radius:0; background: transparent; }
+    .seg button.active { background:#1a2a55; }
+    .result { margin-top: 10px; padding: 10px; border-radius: 12px; border:1px solid #263555; background:#0b1220; }
+    .result strong { font-size: 14px; }
+    .tiny { font-size: 11px; color:#9aa6c2; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>Calculadora de infusiones (guardias)</h1>
+
+    <div class="card">
+      <h2>1) Paciente e infusiones</h2>
+
+      <div class="grid grid-3">
+        <div>
+          <label>Peso del paciente (kg)</label>
+          <input id="weightKg" inputmode="decimal" placeholder="Ej. 70" />
+          <div id="weightErr" class="danger" style="display:none; margin-top:6px;"></div>
+        </div>
+        <div>
+          <label>Nombre del medicamento</label>
+          <input id="drugName" placeholder="Ej. Norepinefrina" />
+        </div>
+        <div>
+          <label>Preparación</label>
+          <div class="row">
+            <div>
+              <label class="tiny">Medicamento (mg)</label>
+              <input id="drugMg" inputmode="decimal" placeholder="Ej. 8" />
+            </div>
+            <div>
+              <label class="tiny">Volumen total (mL)</label>
+              <input id="totalMl" inputmode="decimal" placeholder="Ej. 50" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="muted">
+          Tip: esta app guarda automáticamente tus infusiones en el dispositivo.
+        </div>
+        <div style="flex:0.6;">
+          <button id="addBtn">Agregar infusión</button>
+        </div>
+      </div>
+
+      <div id="addErr" class="danger" style="display:none; margin-top:10px;"></div>
+
+      <div style="margin-top:14px;">
+        <div class="itemTop">
+          <div class="muted">Infusiones agregadas</div>
+          <div class="actions">
+            <button class="ghost" id="clearBtn" title="Borra todas las infusiones">Limpiar todo</button>
+          </div>
+        </div>
+        <div id="infusionList" class="list"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h2>2) Calculadora</h2>
+
+      <div class="row" style="align-items:center;">
+        <div class="muted">Modo</div>
+        <div class="seg" style="max-width:520px;">
+          <button id="modeRate" class="active" type="button">Velocidad actual → Dosis</button>
+          <button id="modeDose" type="button">Dosis deseada → mL/h</button>
+        </div>
+      </div>
+
+      <div class="muted" style="margin-top:10px;">
+        Los resultados se calculan para cada infusión. En “Dosis deseada” el output es mL/h.
+      </div>
+
+      <div id="calcList" class="list" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="muted" style="margin-top:14px;">
+      Nota: esto NO sustituye verificación clínica (límites por fármaco, compatibilidades, bomba, etc.).
+    </div>
+  </div>
+
+<script>
+  // ---------- Helpers ----------
+  const $ = (id) => document.getElementById(id);
+
+  function toNum(v) {
+    if (v === null || v === undefined) return NaN;
+    const s = String(v).replace(",", ".").trim();
+    if (!s) return NaN;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function fmt(n, digits=3) {
+    if (!Number.isFinite(n)) return "—";
+    // recorta decimales sin exagerar
+    const abs = Math.abs(n);
+    const d = abs >= 100 ? 2 : abs >= 10 ? 3 : digits;
+    return n.toFixed(d);
+  }
+
+  function saveState() {
+    localStorage.setItem("inf_calc_state_v1", JSON.stringify(state));
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem("inf_calc_state_v1");
+      if (!raw) return;
+      const obj = JSON.parse(raw);
+      if (obj && typeof obj === "object") state = obj;
+    } catch {}
+  }
+
+  // ---------- State ----------
+  let state = {
+    weightKg: "",
+    mode: "rate", // "rate" or "dose"
+    infusions: [
+      // { id, name, drugMg, totalMl, rateMlH, rateOutUnit, desiredDose, desiredUnit }
+    ]
+  };
+
+  loadState();
+
+  // ---------- Units ----------
+  const RATE_OUT_UNITS = [
+    { value: "mg_h", label: "mg/h" },
+    { value: "mcg_h", label: "mcg/h" },
+    { value: "mg_kg_h", label: "mg/kg/h" },
+    { value: "mcg_kg_h", label: "mcg/kg/h" },
+    { value: "mcg_kg_min", label: "mcg/kg/min" },
+  ];
+
+  const DESIRED_UNITS = [
+    { value: "mg_h", label: "mg/h" },
+    { value: "mcg_h", label: "mcg/h" },
+    { value: "mg_kg_h", label: "mg/kg/h" },
+    { value: "mcg_kg_h", label: "mcg/kg/h" },
+    { value: "mcg_kg_min", label: "mcg/kg/min" },
+  ];
+
+  // ---------- Core math ----------
+  function getConcMgMl(inf) {
+    const mg = toNum(inf.drugMg);
+    const ml = toNum(inf.totalMl);
+    if (!(mg > 0) || !(ml > 0)) return NaN;
+    return mg / ml;
+  }
+
+  function calcDoseFromRate({ W, C, R, outUnit }) {
+    // returns number in requested outUnit
+    const mg_h = R * C;
+    const mcg_h = mg_h * 1000;
+    const mg_kg_h = mg_h / W;
+    const mcg_kg_h = mcg_h / W;
+    const mcg_kg_min = mcg_kg_h / 60;
+
+    switch (outUnit) {
+      case "mg_h": return mg_h;
+      case "mcg_h": return mcg_h;
+      case "mg_kg_h": return mg_kg_h;
+      case "mcg_kg_h": return mcg_kg_h;
+      case "mcg_kg_min": return mcg_kg_min;
+      default: return NaN;
+    }
+  }
+
+  function desiredToMgH({ x, unit, W }) {
+    switch (unit) {
+      case "mg_h": return x;
+      case "mcg_h": return x / 1000;
+      case "mg_kg_h": return x * W;
+      case "mcg_kg_h": return (x * W) / 1000;
+      case "mcg_kg_min": return (x * W * 60) / 1000;
+      default: return NaN;
+    }
+  }
+
+  function calcRateFromDesired({ W, C, x, unit }) {
+    const mg_h = desiredToMgH({ x, unit, W });
+    return mg_h / C; // mL/h
+  }
+
+  // ---------- Rendering ----------
+  function validateWeight(show=true) {
+    const W = toNum(state.weightKg);
+    const ok = (W > 0);
+    const el = $("weightErr");
+    if (show && !ok) {
+      el.style.display = "block";
+      el.textContent = "Ingresa un peso válido (> 0).";
+    } else {
+      el.style.display = "none";
+      el.textContent = "";
+    }
+    return ok ? W : NaN;
+  }
+
+  function renderInfusionList() {
+    const list = $("infusionList");
+    list.innerHTML = "";
+
+    if (!state.infusions.length) {
+      const empty = document.createElement("div");
+      empty.className = "muted";
+      empty.textContent = "Aún no agregas infusiones.";
+      list.appendChild(empty);
+      return;
+    }
+
+    state.infusions.forEach((inf) => {
+      const C = getConcMgMl(inf);
+
+      const div = document.createElement("div");
+      div.className = "item";
+
+      div.innerHTML = `
+        <div class="itemTop">
+          <div>
+            <div class="itemName">${escapeHtml(inf.name || "Sin nombre")}</div>
+            <div class="muted">Preparación: ${escapeHtml(inf.drugMg)} mg en ${escapeHtml(inf.totalMl)} mL
+              <span class="pill" style="margin-left:8px;">${Number.isFinite(C) ? (fmt(C,4) + " mg/mL") : "conc. inválida"}</span>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="ghost" type="button" data-del="${inf.id}">Eliminar</button>
+          </div>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+
+    // bind delete
+    list.querySelectorAll("button[data-del]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-del");
+        state.infusions = state.infusions.filter(x => x.id !== id);
+        saveState();
+        renderAll();
+      });
+    });
+  }
+
+  function renderCalcList() {
+    const list = $("calcList");
+    list.innerHTML = "";
+
+    const W = validateWeight(false);
+
+    if (!state.infusions.length) {
+      const empty = document.createElement("div");
+      empty.className = "muted";
+      empty.textContent = "Agrega infusiones arriba para calcular.";
+      list.appendChild(empty);
+      return;
+    }
+
+    state.infusions.forEach((inf) => {
+      const C = getConcMgMl(inf);
+
+      const div = document.createElement("div");
+      div.className = "item";
+
+      const isRateMode = state.mode === "rate";
+
+      const rateMlH = (inf.rateMlH ?? "");
+      const outUnit = (inf.rateOutUnit ?? "mcg_kg_min");
+
+      const desiredDose = (inf.desiredDose ?? "");
+      const desiredUnit = (inf.desiredUnit ?? "mcg_kg_min");
+
+      // Compute
+      let mainLine = "—";
+      let subLine = "";
+      let warn = "";
+
+      if (!(Number.isFinite(W) && W > 0)) {
+        warn = "Falta peso del paciente.";
+      } else if (!(Number.isFinite(C) && C > 0)) {
+        warn = "Concentración inválida (mg/mL).";
+      } else if (isRateMode) {
+        const R = toNum(rateMlH);
+        if (R > 0) {
+          const val = calcDoseFromRate({ W, C, R, outUnit });
+          mainLine = `${fmt(val)} ${labelFor(outUnit)}`;
+          subLine = `(${fmt(R)} mL/h · ${fmt(C,4)} mg/mL)`;
+        } else {
+          warn = "Ingresa una velocidad (mL/h).";
+        }
+      } else {
+        const x = toNum(desiredDose);
+        if (x > 0) {
+          const R = calcRateFromDesired({ W, C, x, unit: desiredUnit });
+          mainLine = `${fmt(R)} mL/h`;
+          subLine = `para ${fmt(x)} ${labelFor(desiredUnit)} con ${fmt(C,4)} mg/mL`;
+        } else {
+          warn = "Ingresa una dosis deseada.";
+        }
+      }
+
+      div.innerHTML = `
+        <div class="itemTop">
+          <div>
+            <div class="itemName">${escapeHtml(inf.name || "Sin nombre")}</div>
+            <div class="muted">Conc: ${Number.isFinite(C) ? (fmt(C,4) + " mg/mL") : "—"}</div>
+          </div>
+          <div class="pill">${isRateMode ? "Velocidad → Dosis" : "Dosis → mL/h"}</div>
+        </div>
+
+        ${isRateMode ? `
+          <div class="grid grid-2" style="margin-top:10px;">
+            <div>
+              <label>Velocidad actual (mL/h)</label>
+              <input inputmode="decimal" value="${escapeAttr(rateMlH)}" data-rate="${inf.id}" placeholder="Ej. 12" />
+            </div>
+            <div>
+              <label>Mostrar resultado en</label>
+              <select data-outunit="${inf.id}">
+                ${RATE_OUT_UNITS.map(u => `
+                  <option value="${u.value}" ${u.value === outUnit ? "selected" : ""}>${u.label}</option>
+                `).join("")}
+              </select>
+            </div>
+          </div>
+        ` : `
+          <div class="grid grid-2" style="margin-top:10px;">
+            <div>
+              <label>Dosis deseada</label>
+              <input inputmode="decimal" value="${escapeAttr(desiredDose)}" data-dose="${inf.id}" placeholder="Ej. 0.1" />
+            </div>
+            <div>
+              <label>Unidad</label>
+              <select data-desunit="${inf.id}">
+                ${DESIRED_UNITS.map(u => `
+                  <option value="${u.value}" ${u.value === desiredUnit ? "selected" : ""}>${u.label}</option>
+                `).join("")}
+              </select>
+            </div>
+          </div>
+        `}
+
+        <div class="result">
+          <strong>${escapeHtml(mainLine)}</strong>
+          <div class="tiny">${escapeHtml(subLine)}</div>
+          ${warn ? `<div class="danger" style="margin-top:6px;">${escapeHtml(warn)}</div>` : ""}
+        </div>
+      `;
+
+      list.appendChild(div);
+    });
+
+    // Bind inputs/selects
+    list.querySelectorAll("input[data-rate]").forEach(inp => {
+      inp.addEventListener("input", () => {
+        const id = inp.getAttribute("data-rate");
+        const inf = state.infusions.find(x => x.id === id);
+        inf.rateMlH = inp.value;
+        saveState();
+        renderCalcList();
+      });
+    });
+
+    list.querySelectorAll("select[data-outunit]").forEach(sel => {
+      sel.addEventListener("change", () => {
+        const id = sel.getAttribute("data-outunit");
+        const inf = state.infusions.find(x => x.id === id);
+        inf.rateOutUnit = sel.value;
+        saveState();
+        renderCalcList();
+      });
+    });
+
+    list.querySelectorAll("input[data-dose]").forEach(inp => {
+      inp.addEventListener("input", () => {
+        const id = inp.getAttribute("data-dose");
+        const inf = state.infusions.find(x => x.id === id);
+        inf.desiredDose = inp.value;
+        saveState();
+        renderCalcList();
+      });
+    });
+
+    list.querySelectorAll("select[data-desunit]").forEach(sel => {
+      sel.addEventListener("change", () => {
+        const id = sel.getAttribute("data-desunit");
+        const inf = state.infusions.find(x => x.id === id);
+        inf.desiredUnit = sel.value;
+        saveState();
+        renderCalcList();
+      });
+    });
+  }
+
+  function renderAll() {
+    $("weightKg").value = state.weightKg ?? "";
+    renderInfusionList();
+    renderCalcList();
+  }
+
+  // ---------- Events ----------
+  $("weightKg").addEventListener("input", (e) => {
+    state.weightKg = e.target.value;
+    saveState();
+    renderCalcList();
+  });
+
+  $("addBtn").addEventListener("click", () => {
+    const err = $("addErr");
+    err.style.display = "none";
+    err.textContent = "";
+
+    // update state weight from field (in case)
+    state.weightKg = $("weightKg").value;
+
+    const name = $("drugName").value.trim();
+    const drugMg = $("drugMg").value.trim();
+    const totalMl = $("totalMl").value.trim();
+
+    const mg = toNum(drugMg);
+    const ml = toNum(totalMl);
+
+    // validate
+    const W = validateWeight(true); // warn but not required to add infusion
+    if (!(name.length)) {
+      err.style.display = "block";
+      err.textContent = "Pon el nombre del medicamento.";
+      return;
+    }
+    if (!(mg > 0) || !(ml > 0)) {
+      err.style.display = "block";
+      err.textContent = "La preparación debe ser válida: mg > 0 y mL > 0.";
+      return;
+    }
+
+    state.infusions.unshift({
+      id: crypto.randomUUID(),
+      name,
+      drugMg,
+      totalMl,
+      rateMlH: "",
+      rateOutUnit: "mcg_kg_min",
+      desiredDose: "",
+      desiredUnit: "mcg_kg_min",
+    });
+
+    // clear form
+    $("drugName").value = "";
+    $("drugMg").value = "";
+    $("totalMl").value = "";
+
+    saveState();
+    renderAll();
+  });
+
+  $("clearBtn").addEventListener("click", () => {
+    state.infusions = [];
+    saveState();
+    renderAll();
+  });
+
+  function setMode(mode) {
+    state.mode = mode;
+    $("modeRate").classList.toggle("active", mode === "rate");
+    $("modeDose").classList.toggle("active", mode === "dose");
+    saveState();
+    renderCalcList();
+  }
+
+  $("modeRate").addEventListener("click", () => setMode("rate"));
+  $("modeDose").addEventListener("click", () => setMode("dose"));
+
+  // ---------- Small utils ----------
+  function labelFor(unit) {
+    const all = [...RATE_OUT_UNITS, ...DESIRED_UNITS];
+    return (all.find(x => x.value === unit) || {}).label || unit;
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? "").replace(/[&<>"']/g, (m) => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
+    }[m]));
+  }
+  function escapeAttr(str) {
+    return escapeHtml(str).replace(/"/g, "&quot;");
+  }
+
+  // ---------- Init ----------
+  if (state.mode === "dose") setMode("dose");
+  renderAll();
+</script>
+</body>
+</html>
